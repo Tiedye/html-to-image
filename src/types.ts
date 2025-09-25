@@ -101,4 +101,8 @@ export interface Options {
    * An event handler for the error event when any image in html has problem with loading.
    */
   onImageErrorHandler?: OnErrorEventHandler
+  /**
+   * image fallback url, if the image is not found, the url will be used to fetch the image
+   */
+  imageFallbackUrl?: (url: string) => string
 }

@@ -81,18 +81,28 @@ export async function resourceToDataURL(
 
   let dataURL: string
   try {
-    const content = await fetchAsDataURL(
-      resourceUrl,
-      options.fetchRequestInit,
-      ({ res, result }) => {
-        if (!contentType) {
-          // eslint-disable-next-line no-param-reassign
-          contentType = res.headers.get('Content-Type') || ''
-        }
-        return getContentFromDataUrl(result)
-      },
-    )
-    dataURL = makeDataUrl(content, contentType!)
+    let didFallback = false
+    while (true) {
+      try {
+        const content = await fetchAsDataURL(
+          resourceUrl,
+          options.fetchRequestInit,
+          ({ res, result }) => {
+            if (!contentType) {
+              // eslint-disable-next-line no-param-reassign
+              contentType = res.headers.get('Content-Type') || ''
+            }
+            return getContentFromDataUrl(result)
+          },
+        )
+        dataURL = makeDataUrl(content, contentType!)
+        break
+      } catch (error) {
+        if (didFallback || !options.imageFallbackUrl) throw error
+        resourceUrl = options.imageFallbackUrl(resourceUrl)
+        didFallback = true
+      }
+    }
   } catch (error) {
     dataURL = options.imagePlaceholder || ''
 
