@@ -82,11 +82,14 @@ export async function resourceToDataURL(
   let dataURL: string
   try {
     let didFallback = false
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       try {
+        // eslint-disable-next-line no-await-in-loop
         const content = await fetchAsDataURL(
           resourceUrl,
           options.fetchRequestInit,
+          // eslint-disable-next-line no-loop-func
           ({ res, result }) => {
             if (!contentType) {
               // eslint-disable-next-line no-param-reassign
@@ -99,6 +102,7 @@ export async function resourceToDataURL(
         break
       } catch (error) {
         if (didFallback || !options.imageFallbackUrl) throw error
+        // eslint-disable-next-line no-param-reassign
         resourceUrl = options.imageFallbackUrl(resourceUrl)
         didFallback = true
       }
