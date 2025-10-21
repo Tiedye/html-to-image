@@ -19,19 +19,27 @@ async function cloneCanvasElement(canvas: HTMLCanvasElement) {
 
 async function cloneVideoElement(video: HTMLVideoElement, options: Options) {
   if (video.currentSrc) {
-    const canvas = document.createElement('canvas')
-    const ctx = canvas.getContext('2d')
-    canvas.width = video.clientWidth
-    canvas.height = video.clientHeight
-    ctx?.drawImage(video, 0, 0, canvas.width, canvas.height)
-    const dataURL = canvas.toDataURL()
-    return createImage(dataURL)
+    try {
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      canvas.width = video.clientWidth
+      canvas.height = video.clientHeight
+      ctx?.drawImage(video, 0, 0, canvas.width, canvas.height)
+      const dataURL = canvas.toDataURL()
+      return createImage(dataURL)
+    } catch (error) {
+      // fallback to poster
+    }
   }
 
-  const poster = video.poster
-  const contentType = getMimeType(poster)
-  const dataURL = await resourceToDataURL(poster, contentType, options)
-  return createImage(dataURL)
+  try {
+    const poster = video.poster
+    const contentType = getMimeType(poster)
+    const dataURL = await resourceToDataURL(poster, contentType, options)
+    return await createImage(dataURL)
+  } catch (error) {
+    return document.createElement('span')
+  }
 }
 
 async function cloneIFrameElement(iframe: HTMLIFrameElement, options: Options) {

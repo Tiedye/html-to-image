@@ -101,9 +101,9 @@ export async function resourceToDataURL(
         dataURL = makeDataUrl(content, contentType!)
         break
       } catch (error) {
-        if (didFallback || !options.imageFallbackUrl) throw error
+        if (didFallback || !options.resourceFallbackUrl) throw error
         // eslint-disable-next-line no-param-reassign
-        resourceUrl = options.imageFallbackUrl(resourceUrl)
+        resourceUrl = options.resourceFallbackUrl(resourceUrl)
         didFallback = true
       }
     }

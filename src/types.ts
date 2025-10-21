@@ -104,5 +104,5 @@ export interface Options {
   /**
    * image fallback url, if the image is not found, the url will be used to fetch the image
    */
-  imageFallbackUrl?: (url: string) => string
+  resourceFallbackUrl?: (url: string) => string
 }
