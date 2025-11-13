@@ -42,12 +42,17 @@ async function cloneVideoElement(video: HTMLVideoElement, options: Options) {
   }
 }
 
-async function cloneIFrameElement(iframe: HTMLIFrameElement, options: Options) {
+async function cloneIFrameElement(
+  iframe: HTMLIFrameElement,
+  options: Options,
+  timeRef: { lastPause: number },
+) {
   try {
     if (iframe?.contentDocument?.body) {
       return (await cloneNode(
         iframe.contentDocument.body,
         options,
+        timeRef,
         true,
       )) as HTMLBodyElement
     }
@@ -61,6 +66,7 @@ async function cloneIFrameElement(iframe: HTMLIFrameElement, options: Options) {
 async function cloneSingleNode<T extends HTMLElement>(
   node: T,
   options: Options,
+  timeRef: { lastPause: number },
 ): Promise<HTMLElement> {
   if (isInstanceOfElement(node, HTMLCanvasElement)) {
     return cloneCanvasElement(node)
@@ -71,7 +77,7 @@ async function cloneSingleNode<T extends HTMLElement>(
   }
 
   if (isInstanceOfElement(node, HTMLIFrameElement)) {
-    return cloneIFrameElement(node, options)
+    return cloneIFrameElement(node, options, timeRef)
   }
 
   return node.cloneNode(isSVGElement(node)) as T
@@ -87,6 +93,7 @@ async function cloneChildren<T extends HTMLElement>(
   nativeNode: T,
   clonedNode: T,
   options: Options,
+  timeRef: { lastPause: number },
 ): Promise<T> {
   if (isSVGElement(clonedNode)) {
     return clonedNode
@@ -115,7 +122,7 @@ async function cloneChildren<T extends HTMLElement>(
   await children.reduce(
     (deferred, child) =>
       deferred
-        .then(() => cloneNode(child, options))
+        .then(() => cloneNode(child, options, timeRef))
         .then((clonedChild: HTMLElement | null) => {
           if (clonedChild) {
             clonedNode.appendChild(clonedChild)
@@ -212,6 +219,7 @@ function decorate<T extends HTMLElement>(
 async function ensureSVGSymbols<T extends HTMLElement>(
   clone: T,
   options: Options,
+  timeRef: { lastPause: number },
 ) {
   const uses = clone.querySelectorAll ? clone.querySelectorAll('use') : []
   if (uses.length === 0) {
@@ -227,7 +235,12 @@ async function ensureSVGSymbols<T extends HTMLElement>(
       const definition = document.querySelector(id) as HTMLElement
       if (!exist && definition && !processedDefs[id]) {
         // eslint-disable-next-line no-await-in-loop
-        processedDefs[id] = (await cloneNode(definition, options, true))!
+        processedDefs[id] = (await cloneNode(
+          definition,
+          options,
+          timeRef,
+          true,
+        ))!
       }
     }
   }
@@ -259,15 +272,26 @@ async function ensureSVGSymbols<T extends HTMLElement>(
 export async function cloneNode<T extends HTMLElement>(
   node: T,
   options: Options,
+  timeRef: { lastPause: number },
   isRoot?: boolean,
 ): Promise<T | null> {
+  const now = performance.now()
+  if (timeRef.lastPause && now - timeRef.lastPause > 1) {
+    // eslint-disable-next-line no-promise-executor-return
+    await new Promise<void>((resolve) => setTimeout(resolve, 0))
+    timeRef.lastPause = performance.now()
+  }
+
   if (!isRoot && options.filter && !options.filter(node)) {
     return null
   }
 
   return Promise.resolve(node)
-    .then((clonedNode) => cloneSingleNode(clonedNode, options) as Promise<T>)
-    .then((clonedNode) => cloneChildren(node, clonedNode, options))
+    .then(
+      (clonedNode) =>
+        cloneSingleNode(clonedNode, options, timeRef) as Promise<T>,
+    )
+    .then((clonedNode) => cloneChildren(node, clonedNode, options, timeRef))
     .then((clonedNode) => decorate(node, clonedNode, options))
-    .then((clonedNode) => ensureSVGSymbols(clonedNode, options))
+    .then((clonedNode) => ensureSVGSymbols(clonedNode, options, timeRef))
 }
